@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-worker-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vote-worker-app
+  template:
+    metadata:
+      labels:
+        app: vote-worker-app
+    spec:
+      containers:
+      - name: vote-worker-app
+        image: 114988434575.dkr.ecr.ap-southeast-3.amazonaws.com/vote-worker-app:latest
+        resources:
+          requests:
+            memory: 1024Mi
+          limits:
+            memory: 2048Mi
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: tz-config
+          mountPath: /etc/localtime
+      volumes:
+      - name: tz-config
+        hostPath:
+          path: /usr/share/zoneinfo/Asia/Jakarta

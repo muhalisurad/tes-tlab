@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('start'){
+            steps{
+                git branch: 'main', url: 'https://gitlab.com/peniti-app/peniti-backend/peniti-money-exchange.git'
+            }
+        }
+        stage('build and push to ecr') {
+            steps {
+                sh ‘aws ecr get-login-password --region ap-southeast-3 | docker login --username AWS --password-stdin 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com
+                sh ‘docker build -t results-app -f application/results-app/Dockerfile .’
+                sh ‘docker tag result-app:latest 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/results-app:latest’
+                sh ‘docker push 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/results-app:latest’
+
+                sh ‘docker build -t vote-worker -f application/vote-worker/Dockerfile .’
+                sh ‘docker tag vote-worker:latest 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/vote-worker:latest’
+                sh ‘docker push 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/vote-worker:latest’
+
+                sh ‘docker build -t web-vote-app -f application/web-vote-app/Dockerfile .’
+                sh ‘docker tag web-vote-app:latest 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/web-vote-app:latest’
+                sh ‘docker push 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/web-vote-app:latest’
+
+        stage('deploy to kubernetes') {
+            steps {
+                sh ‘kubectl apply -f application/results-app/deployment.yaml -n dev
+                sh ‘kubectl apply -f application/results-app/service.yaml -n dev
+                sh ‘kubectl apply -f application/vote-worker/deployment.yaml -n dev
+                sh ‘kubectl apply -f application/vote-worker/service.yaml -n dev
+                sh ‘kubectl apply -f application/web-vote-app/deployment.yaml -n dev
+                sh ‘kubectl apply -f application/web-vote-app/service.yaml -n dev
+
+            }
+        }
+        stage('Cleaning') {
+            steps {
+	  sh ‘docker rmi 	result-app:latest 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/results-app:latest’
+                 sh ‘docker rmi 	vote-worker:latest 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/vote-worker:latest’
+                 sh ‘docker rmi 	web-vote-app:latest 114988434576.dkr.ecr.ap-southeast-3.amazonaws.com/web-vote-app:latest
+                 sh ‘docker rmi $(docker images -a -q)’
+            }
+        }    
+    }
+}
